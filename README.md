@@ -11,6 +11,6 @@ Sprinter-ESP
 
 [Монтажная схема](Export/PCB_Sprinter-ESP-v1.0.2.pdf)
 
-
 [Спринтер в Телеграм](https://t.me/zx_sprinter)
+
 [Спринтер в Web](https://www.sprinter.ru/)
