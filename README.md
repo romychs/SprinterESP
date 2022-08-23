@@ -6,9 +6,9 @@
 
 ![image](Export/sprinter-esp.jpg)
 
-[Принципиальная схема](Export/Schematic_Sprinter-ESP_v1.0.2.pdf)
+[Принципиальная схема](Export/Schematic_Sprinter-ESP_v1.0.3.pdf)
 
-[Монтажная схема](Export/PCB_Sprinter-ESP-v1.0.2.pdf)
+[Монтажная схема](Export/PCB_Sprinter-ESP-v1.0.3.pdf)
 
 [Спринтер в Телеграм](https://t.me/zx_sprinter)
 
