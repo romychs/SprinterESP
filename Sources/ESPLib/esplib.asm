@@ -6,28 +6,28 @@
                DEVICE NOSLOT64K
                ;INCLUDE "ports.inc"
 
-port_isa	   EQU 0x9FBD
-port_system EQU 0x1FFD
-emm_win_p3 	EQU 0xE2
+PORT_ISA		   EQU 0x9FBD
+PORT_SYSTEM		EQU 0x1FFD
+PORT_MEM_W3    EQU 0xE2
 
-ISA_BASE_A 	EQU 0xC000                    ; Базовый адрес портов ISA в памяти
-PORT_UART   EQU 0x03E8                    ; Базовый номер порта COM3
-PORT_UART_A EQU ISA_BASE_A + PORT_UART    ; Порты чипа UART в памяти 
+ISA_BASE_A		EQU 0xC000        ; Базовый адрес портов ISA в памяти
+PORT_UART		EQU 0x03E8        ; Базовый номер порта COM3
+PORT_UART_A		EQU ISA_BASE_A + PORT_UART    ; Порты чипа UART в памяти 
 
-            ; Порты UART TC16C550 в памяти 
-RBR 			EQU PORT_UART_A + 0
-THR 			EQU PORT_UART_A + 0
-IER 			EQU PORT_UART_A + 1
-IIR 			EQU PORT_UART_A + 2
-FCR 			EQU PORT_UART_A + 2
-LCR 			EQU PORT_UART_A + 3
-MCR 			EQU PORT_UART_A + 4
-LSR 			EQU PORT_UART_A + 5
-MSR 			EQU PORT_UART_A + 6
-SCR 			EQU PORT_UART_A + 7
-DLL 			EQU PORT_UART_A + 0
-DLM 			EQU PORT_UART_A + 1
-AFR 			EQU PORT_UART_A + 2
+			      ; Регистры UART TC16C550 в памяти 
+REG_RBR 			EQU PORT_UART_A + 0
+REG_THR 			EQU PORT_UART_A + 0
+REG_IER 			EQU PORT_UART_A + 1
+REG_IIR 			EQU PORT_UART_A + 2
+REG_FCR		   EQU PORT_UART_A + 2
+REG_LCR 			EQU PORT_UART_A + 3
+REG_MCR 			EQU PORT_UART_A + 4
+REG_LSR 			EQU PORT_UART_A + 5
+REG_MSR 			EQU PORT_UART_A + 6
+REG_SCR 			EQU PORT_UART_A + 7
+REG_DLL 			EQU PORT_UART_A + 0
+REG_DLM 			EQU PORT_UART_A + 1
+REG_AFR 			EQU PORT_UART_A + 2
 
 BAUD_RATE 	EQU 115200                    ; Скорость соединения с ESP8266
 XIN_FREQ 	EQU 14745600                  ; Частота генератора для TL16C550
@@ -66,7 +66,7 @@ reset_isa_:
 				push af
 				push bc
             push hl
-				ld bc, port_isa
+				ld bc, PORT_ISA
             ld a, 0xC0		   ; RESET=1 AEN=1
 				out (c), a
 				ld hl,2000
@@ -89,21 +89,21 @@ reset_isa_:
 open_isa_:
             push af
             push bc
-            ld bc, emm_win_p3
+            PORT_EMM_WIN_P3in_p3
             in a,(c)
             ld (save_mmu3), a
             push bc
-            ld bc, port_system
+            ld bc, PORT_SYSTEM
             ld a, 0x11
             out (c), a
-            pop bc            ; emm_win_p3
+            PORT_MEM_W3      ; em   m_win_p3
             pop af
             and a, 0x01
             rlca
             rlca
             or a, 0xd0        ; 1101 - Magic number, 0100 - 0,ISA PORT, ISA SLOT, 0
             out (c), a
-            ld bc, port_system
+            ld bc, PORT_SYSTEM
             xor a
             out (c), a
             pop bc
@@ -118,11 +118,11 @@ open_isa_:
 close_isa_:
             push af
             push bc
-            ld bc, port_system
+            ld bc, PORT_SYSTEM
             ld a, 0x01
             out (c), a
             ld a, save_mmu3
-            ld bc, emm_win_p3
+            PORT_EMM_WIN_P3in_p3
             out (c), a
             pop bc
             pop af
@@ -147,25 +147,28 @@ init_serial_:
             push hl
             call open_isa.open_isa_
             ld a, 1
-            ld (FCR), a            ; 8 byte FIFO buffer
+            ld (REG_FCR
+          a            ; 8 byte FIFO buffer
             ld a, 0x81   
-            ld (FCR), a
+            ld (REG_FCR
+          a
             xor a
-            ld (IER), a            ; Disable interrupts
+            ld (REG_IER
+         ), a            ; Disable interrupts
             
             ; Set baud rate
             ld a, 0x83
-            ld (LCR), a            ; enable Baud rate latch
+              ld (REG_LCR), a            ; enable Baud rate latch
             ld a, DIVISOR
-            ld (DLL), a            ; 8 - 115200
+            ld (REG_DLL), a            ; 8 - 115200
             xor a
-            ld (DLM), a            
-            ld a, 0x03           ; disable Baud rate latch & 8N1
-            ld (LCR), a
+            ld (REG_DLM), a            
+            ld a, 0x03             ; disable Baud rate latch & 8N1
+            ld (REG_LCR), a
             
             ; reset ESP
             ld a,0x06            ; ESP -PGM=1, -RTS=0
-            ld (MCR), a
+            ld (REG_MCR), a
             ld hl,2000
             call delay.delay_
             ld a,0x02            ; ESP -RST=1, -RTS=0
@@ -213,7 +216,7 @@ wait_tr_:
             push bc
             push hl
             ld bc, 100
-            ld hl, LSR
+            ld hl, REG_LSR
 wait_tr_r:            
             call read_reg.read_reg_
             and a, 0x20
@@ -238,7 +241,8 @@ empty_rs_:
             push af
             call open_isa.open_isa_
             ld a, 0x83
-            ld (FCR), a
+            ld (REG_FCR
+          a
             call close_isa.close_isa_
             pop af
             ret
@@ -254,7 +258,7 @@ wait_rs_:
             push bc
             push hl
             ld bc, 1000
-            ld hl, LSR
+            ld hl, REG_LSR
 wait_rs_r:            
             call read_reg.read_reg_
             and a, 0x01
