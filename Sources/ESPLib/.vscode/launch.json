@@ -1,0 +1,88 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "dezog",
+            "request": "launch",
+            "name": "Internal Simulator",
+            "remoteType": "zsim",
+            "zsim": {
+                "visualMemory": true,
+                "memoryModel": "CUSTOM",
+                "customMemory": {
+                    "slots": [
+                        {
+                            "name": "PAGE0",
+                            "range": ["0x0000","0x3FFF"],
+                            "banks": [{"index": [0, 255]}],
+                            "initialBank": 0
+                        },
+                        {
+                            "name": "PAGE1",
+                            "range": ["0x4000","0x7FFF"],
+                            "banks": [{"index": [0, 255]}],
+                            "initialBank": 1
+                        },
+                        {
+                            "name": "PAGE2",
+                            "range": ["0x8000","0xBFFF"],
+                            "banks": [{"index": [0, 255]}],
+                            "initialBank": 2
+                        },
+                        {
+                            "name": "PAGE3",
+                            "range": ["0xC000","0xFFFF"],
+                            "banks": [{"index": [0, 255]}],
+                            "initialBank": 3
+                        }
+                    ],
+                    "ioMmu": [
+                        "if (portAddress == 0x82) {",
+                        "  bank = portValue;",
+                        "  PAGE0 = bank;",
+                        "}",
+                        "if (portAddress == 0xA2) {",
+                        "  bank = portValue;",
+                        "  PAGE1 = bank;",
+                        "}",
+                        "if (portAddress == 0xC2) {",
+                        "  bank = portValue;",
+                        "  PAGE2 = bank;",
+                        "}",
+                        "if (portAddress == 0xE2) {",
+                        "  bank = portValue;",
+                        "  PAGE3 = bank;",
+                        "}"
+                    ]
+                },
+                "customCode": {
+                    "debug": false,
+                    "jsPath": "sim/ports.js"
+                },
+            },
+            "sjasmplus": [
+                {
+                    "path": "espset.sld"
+                }
+            ],
+            "history": {
+                "reverseDebugInstructionCount": 1000000,
+                "spotCount": 10,
+                "codeCoverageEnabled": true
+            },
+            "startAutomatically": false,
+            "commandsAfterLaunch": [],
+            "rootFolder": "${workspaceFolder}",
+            "topOfStack": "STACK_TOP",
+            "loadObjs": [
+                {
+                    "path": "espset.exe",
+                    "start": "0x0000"
+                }
+            ],
+            "execAddress": "0x8100",
+            "smallValuesMaximum": 513,
+            "tmpDir": ".tmp"
+        }
+    ]
+}

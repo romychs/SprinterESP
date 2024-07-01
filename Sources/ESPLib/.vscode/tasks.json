@@ -1,0 +1,41 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "make (sjasmplus)",
+            "type": "shell",
+            "command": "sjasmplus",
+            "args": [
+                "--sld=espset.sld",
+                "--sym=espset.labels",
+                "--raw=espset.exe",
+                "--fullpath",
+                "espset.asm"
+            ],
+            "problemMatcher": {
+                "owner": "sjasmplus",
+                "fileLocation": "autoDetect",
+                "pattern": {
+                    "regexp": "^(.*)\\((\\d+)\\):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "severity": 3,
+                    "message": 4
+                }
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "start mame",
+            "type": "shell",
+            "command": "while true; do ./mame spectrum -window -debugger gdbstub -debug -debugger_port 12000 -verbose -resolution 512x384 ; sleep 2 ; done",
+            "options": {
+                "cwd": "${config:mame_dir}"
+            },
+            "problemMatcher": []
+        }
+    ]
+}
