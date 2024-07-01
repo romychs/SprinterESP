@@ -36,13 +36,18 @@ DELAY_1MS
 ;	Out: BC - length of string
 ; ------------------------------------------------------
 STRLEN
-	PUSH	DE,HL
+	PUSH	DE,HL,HL
 	LD		BC,MAX_BUFF_SIZE
 	XOR		A
 	CPIR
 	POP		DE
 	SUB		HL,DE										; llength of zero ended string
 	LD		BC,HL
+	LD		A, B
+	OR		C
+	JR		Z, STRL_NCOR
+	DEC		BC
+STRL_NCOR	
 	POP		HL,DE
 	RET
 
@@ -51,10 +56,9 @@ STRLEN
 ; Inp: HL, DE - pointers to strinngs to compare
 ; Out: CF=0 - equal, CF=1 - not equal
 ; ------------------------------------------------------
-STRCMP	INCLUDE "util.asm"
-	INCLUDE "isa.asm"
-	INCLUDE "esplib.asm"
-
+STRCMP
+	PUSH	DE,HL
+STC_NEXT
 	LD		A, (DE)
 	CP		(HL)
 	JR		NZ, STC_NE
@@ -66,14 +70,9 @@ STRCMP	INCLUDE "util.asm"
 STC_NE
 	SCF
 STC_EQ
-	POP		BC,HL,DE
+	POP		HL,DE
 	RET
 
 
-
-
-
-	POP 	BC,HL,DE
-	RET
 
 	ENDMODULE

@@ -48,25 +48,22 @@ ISA_RESET
 ;   Inp: A = 0 - ISA slot 0, 1 - ISA SLOT 1
 ; ------------------------------------------------------
 ISA_OPEN
-	PUSH	BC
-	PUSH	AF
+	PUSH	AF,BC
 	LD		BC, PAGE3
 	IN 		A,(C)
 	LD 		(SAVE_MMU3), A
 	LD 		BC, PORT_SYSTEM
 	LD 		A, 0x11
 	OUT 	(C), A
-	POP 	AF
-	AND 	A, 0x01
-	RLCA
-	RLCA
-	OR 		A, 0xD0										; 1101 - MAGIC NUMBER, 0100 - 0,ISA PORT, ISA SLOT, 0
+ISA_SLOT+*	LD	A,0x01
+	SLA		A
+	OR 		A, 0xD4										; D4 - ISA1, D6 - ISA2
 	LD		BC, PAGE3
 	OUT 	(C), A
 	LD 		BC, PORT_ISA
 	XOR 	A
 	OUT 	(C), A
-	POP 	BC
+	POP 	BC,AF
 	RET
 
 

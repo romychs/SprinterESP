@@ -77,7 +77,32 @@ RES_DISABLED 	EQU	8
 
 	MODULE WIFI
 
-RS_BUFF	DS RS_BUFF_SIZE, 0
+
+; ------------------------------------------------------
+; Find TL550C in ISA slot
+; Out: CF=1 - Not found, CF=0 - ISA.ISA_SLOT found in slot
+; ------------------------------------------------------
+UART_FIND
+	PUSH	HL
+	XOR 	A
+	CALL	UT_T_SLOT
+	JR		Z, UF_T_FND
+	LD		A,1
+	CALL	UT_T_SLOT
+	JR		Z, UF_T_FND
+	SCF
+UF_T_FND
+	POP		HL
+	RET
+
+; Test slot, A - ISA Slot no. 0 or 1
+UT_T_SLOT
+	LD		(ISA.ISA_SLOT), A
+	LD		HL, REG_IER
+	CALL	UART_READ
+	AND		0xF0
+	RET
+
 
 ; ------------------------------------------------------
 ; Init UART device TL16C550
@@ -126,7 +151,8 @@ UART_READ
 	LD		(HL),BC
 	JR		UART_READ
 RX_RET
-	INC		(HL)
+	INC		HL
+	LD		(RX_PTR),HL
 	RET
 
 RX_PTR 	DW	RX_MSG
@@ -257,8 +283,10 @@ UVR_TO
 UVR_OK
 	POP		HL,BC
 	IF	DEBUG==1
-WAIT_MS DW 0
+WAIT_MS
+	DW 0
 UART_WAIT_RS1	
+	AND		A											; CF=0
 	ENDIF
 	RET
 	
@@ -325,11 +353,16 @@ UART_TX_CMD
 		; HL - Buffer, BC - Size
 		CALL	UTIL.STRLEN
 		CALL	UART_TX_BUFFER
-		JR		NC, UTC_RCV_NXT
+		JR		NC, UTC_STRT_RX
 		; error, transmit timeout
 		LD		A, RES_TX_TIMEOUT
 		JR		UTC_RET
+UTC_STRT_RX		
 		; no transmit timeout, receive response
+		; IX - pointer to begin of current line
+		LD		IXH, D
+		LD		IXL, E
+		LD		BC,(BSIZE)
 UTC_RCV_NXT
 		; wait receiver ready
 		;LD		BC,(WAIT_MS)
@@ -338,15 +371,9 @@ UTC_RCV_NXT
 		; error, read timeout
 		LD		A, RES_RS_TIMEOUT
 		JR		UTC_RET
-
 		; no receive timeout
 UTC_NO_RT
-		; IX - pointer to begin of current line
-		LD		IXH, D
-		LD		IXL, E
-		LD		BC,(BSIZE)
 
-;UTC_RCV_NXT
 		; read symbol from tty
 		LD		HL, REG_RBR
 		CALL	UART_READ
@@ -356,13 +383,10 @@ UTC_NO_RT
 		JR		Z, UTC_END								; LF - last symbol in responce
 		LD		(DE),A
 		INC		DE
-		;LD		BC,(BSIZE)
 		DEC		BC
 		LD		A, B
 		OR		C
-		;LD		(BSIZE),BC
 		JR		NZ, UTC_RCV_NXT
-
 
 UTC_END
 		XOR		A
@@ -402,5 +426,8 @@ UTC_NOMSG
 UTC_RET
 		POP		HL, DE, BC
 		RET
+
+; Buffer to receive response from ESP
+RS_BUFF	DS RS_BUFF_SIZE, 0
 
 	ENDMODULE

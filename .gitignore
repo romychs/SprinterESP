@@ -1,0 +1,8 @@
+*.exe
+*.sld
+*.labels
+*.tmp
+*.bak
+*.lst
+*.list 
+.tmp/
