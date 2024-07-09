@@ -20,9 +20,22 @@ DSS_FIND_NEXT       EQU 0x011A
 DSS_MKDIR           EQU 0x1B
 DSS_CHDIR           EQU 0x1D
 DSS_CURDIR          EQU 0x1E
+DSS_ECHOKEY			EQU	0x32 
 DSS_EXIT            EQU 0x41
+DSS_WAITKEY			EQU 0x48
+DSS_SETVMOD			EQU 0x50
+DSS_GETVMOD			EQU 0x51
+DSS_CLEAR			EQU 0x56
 DSS_PCHARS          EQU 0x5C
+
+
+DSS_VMOD_T40		EQU 0x02							; text 40x32, 16 colors
+DSS_VMOD_T80		EQU 0x03							; text 80x32, 16 colors
+DSS_VMOD_G320		EQU 0x81							; graphics 320x256, 256 colors
+DSS_VMOD_G640		EQU 0x82							; graphics 640x256, 16 colors
+
 
 ; DSS Error codes
 E_FILE_EXISTS       EQU 7
 E_FILE_NOT_FOUND    EQU 3
+

@@ -9,8 +9,8 @@ PORT_UART		EQU 0x03E8        						; Базовый номер порта COM3
 PORT_UART_A		EQU ISA_BASE_A + PORT_UART    			; Порты чипа UART в памяти 
 
 ; UART TC16C550 Registers in memory
-REG_RBR 		EQU PORT_UART_A + 0
-REG_THR 		EQU PORT_UART_A + 0
+REG_RBR 		EQU PORT_UART_A
+REG_THR 		EQU PORT_UART_A
 REG_IER 		EQU PORT_UART_A + 1
 REG_IIR 		EQU PORT_UART_A + 2
 REG_FCR			EQU PORT_UART_A + 2
@@ -19,9 +19,11 @@ REG_MCR 		EQU PORT_UART_A + 4
 REG_LSR 		EQU PORT_UART_A + 5
 REG_MSR 		EQU PORT_UART_A + 6
 REG_SCR 		EQU PORT_UART_A + 7
-REG_DLL 		EQU PORT_UART_A + 0
+REG_DLL 		EQU PORT_UART_A
 REG_DLM 		EQU PORT_UART_A + 1
 REG_AFR 		EQU PORT_UART_A + 2
+
+
 
 ; UART TC16C550 Register bits 
 MCR_DTR         EQU	0x01
@@ -77,6 +79,22 @@ RES_DISABLED 	EQU	8
 
 	MODULE WIFI
 
+; -- UART Registers offset
+
+_RBR 			EQU	0
+_THR 			EQU	0
+_IER 			EQU	1
+_IIR 			EQU	2
+_FCR			EQU	2
+_LCR			EQU	3
+_MCR 			EQU	4
+_LSR 			EQU	5
+_MSR 			EQU	6
+_SCR 			EQU	7
+_DLL 			EQU	0
+_DLM 			EQU	1
+_AFR 			EQU	2
+
 
 ; ------------------------------------------------------
 ; Find TL550C in ISA slot
@@ -108,26 +126,27 @@ UT_T_SLOT
 ; Init UART device TL16C550
 ; ------------------------------------------------------
 UART_INIT
-	PUSH	AF
-	PUSH	HL
+	PUSH	AF, IX
+
 	CALL 	ISA.ISA_OPEN
-	LD		A, FCR_TR14 | FCR_FIFO						; Enable FIFO buffer, trigger to 14 byte
-	LD		(REG_FCR),A									
+	LD		IX, PORT_UART_A
+	LD		A, FCR_TR8 | FCR_FIFO						; Enable FIFO buffer, trigger to 14 byte
+	LD		(IX+_FCR),A									
 	XOR 	A
-	LD 		(REG_IER), A								; Disable interrupts
+	LD 		(IX+_IER), A										; Disable interrupts
 
 	; Set 8bit word and Divisor for speed
 	LD 		A, LCR_DLAB | LCR_WL8
-	LD 		(REG_LCR), A								; Enable Baud rate latch
+	LD 		(IX+_LCR), A										; Enable Baud rate latch
 	LD 		A, DIVISOR
-	LD 		(REG_DLL), A								; 8 - 115200
+	LD 		(IX+_DLL), A										; 8 - 115200
 	XOR 	A
-	LD		(REG_DLM), A
+	LD		(IX+_DLM), A
 	LD 		A, LCR_WL8									; 8bit word, disable latch
-	LD 		(REG_LCR), A
+	LD 		(IX+_LCR), A
 	CALL 	ISA.ISA_CLOSE
-	POP HL
-	POP AF
+
+	POP 	IX,AF
 	RET
 
 ; ------------------------------------------------------
@@ -136,28 +155,10 @@ UART_INIT
 ;   Out: A - value from register
 ; ------------------------------------------------------
 UART_READ
-	IF	DEBUG==0
 	CALL 	ISA.ISA_OPEN
 	LD 		A, (HL)
 	CALL 	ISA.ISA_CLOSE
 	RET
-	ELSE
-; --- DEBUG
-	LD		HL,(RX_PTR)
-	LD		A,(HL)
-	OR		A
-	JR		NZ, RX_RET
-	LD		BC, RX_MSG
-	LD		(HL),BC
-	JR		UART_READ
-RX_RET
-	INC		HL
-	LD		(RX_PTR),HL
-	RET
-
-RX_PTR 	DW	RX_MSG
-RX_MSG	DB  "WiFi module\r\nOK\r\n",0
-	ENDIF
 
 ; ------------------------------------------------------
 ; Write TL16C550 register
@@ -174,23 +175,25 @@ UART_WRITE
 ;   Out: CF=1 - tr not ready,  CF=0 ready
 ; ------------------------------------------------------
 UART_WAIT_TR
-	PUSH	BC, HL
+	PUSH	AF, BC, HL
+
 	CALL	ISA.ISA_OPEN
-	LD BC,	200
+	LD BC,	100
 	LD HL, 	REG_LSR
-WAIT_TR_R           
+WAIT_TR_BZY           
 	LD 		A,(HL)
 	AND 	A, LSR_THRE
-	JP 		NZ,WAIT_TR_E
+	JR 		NZ,WAIT_TR_RDY
 	CALL	UTIL.DELAY_1MS
 	DEC 	BC
 	LD 		A, C
 	OR		B	
-	JP 		NZ,WAIT_TR_R
+	JR 		NZ,WAIT_TR_BZY
 	SCF
-WAIT_TR_E
+WAIT_TR_RDY
 	CALL ISA.ISA_CLOSE
-	POP 	HL, BC
+
+	POP 	HL, BC, AF
 	RET
 
 ; ------------------------------------------------------
@@ -212,7 +215,6 @@ UTB_NOT_R
 ;	Inp: HL -> buffer, BC - size
 ;   Out: CF=0 - Ok, CF=1 - Timeout
 ; ------------------------------------------------------
-	IF	DEBUG==0
 UART_TX_BUFFER
 	PUSH	BC,DE,HL
 	LD		DE, REG_THR
@@ -237,22 +239,17 @@ UTX_EMP
 	CALL	ISA.ISA_CLOSE
 	POP		HL,DE,BC
 	RET
-	ELSE
-; --- DEBUG
-UART_TX_BUFFER
-	XOR		A
-	RET
-	ENDIF
 ; ------------------------------------------------------
 ; Empty receiver FIFO buffer
 ; ------------------------------------------------------
 UART_EMPTY_RS
-	PUSH 	AF
+	PUSH 	AF, HL
 	CALL 	ISA.ISA_OPEN
-	LD 		A, FCR_TR14 | FCR_RESET_RX | FCR_FIFO
-	LD 		(REG_FCR), A
+	LD 		A, FCR_TR8 | FCR_RESET_RX | FCR_FIFO
+	LD		HL, REG_FCR
+	LD 		(HL), A
 	CALL	ISA.ISA_CLOSE
-	POP 	AF
+	POP 	HL, AF
 	RET
 
 ; ------------------------------------------------------
@@ -260,61 +257,50 @@ UART_EMPTY_RS
 ; Inp: BC - Wait ms
 ; Out: CF=1 - Timeout, FIFO is EMPTY
 ; ------------------------------------------------------
-	IF	DEBUG==0
 UART_WAIT_RS1
 	PUSH	BC,HL
 WAIT_MS+*	LD	BC,0x0000
 	JR		UVR_NEXT
-	ENDIF
 UART_WAIT_RS
 	PUSH	BC,HL
 UVR_NEXT
 	LD		HL, REG_LSR
 	CALL	UART_READ
 	AND		LSR_DR
-	JR		Z,UVR_OK
+	JR		NZ,UVR_OK
 	CALL	UTIL.DELAY_1MS
 	DEC		BC
 	LD		A,B
-	OR		A,C
+	OR		C
 	JR		NZ,UVR_NEXT
 UVR_TO
 	SCF
 UVR_OK
 	POP		HL,BC
-	IF	DEBUG==1
-WAIT_MS
-	DW 0
-UART_WAIT_RS1	
-	AND		A											; CF=0
-	ENDIF
 	RET
 	
-
 ; ------------------------------------------------------
 ; Reset ESP module
-; Inp: A != 0 - Full Reset
 ; ------------------------------------------------------
 ESP_RESET
-	PUSH	HL, AF
+	PUSH	AF,HL
+
 	CALL	ISA.ISA_OPEN
-	AND		A
-	JR		Z, ESPR_SHRT
+
 	LD		HL, REG_MCR
 	LD		A, MCR_RST | MCR_RTS						; 0110b ESP  -PGM=1, -RST=0, -RTS=0
 	LD		(HL), A
-	CALL	UTIL.DELAY
-ESPR_SHRT
-	LD		A, MCR_AFE | MCR_RTS						; 0x22 -RST = 1 -RTS=0 AutoFlow enabled
+	CALL	UTIL.DELAY_1MS
+	;LD		HL, REG_MCR
+	LD		A, MCR_AFE | MCR_RTS						; 0x22 -RST = 1 -RTS=0 AutoFlow enabled	
 	LD		(HL), A
+
 	CALL	ISA.ISA_CLOSE
-	POP 	AF
-	AND		A
-	JR		Z,ESPR_NW
-	LD		HL,0xFFFF
+	
+	LD		HL,2000
 	CALL	UTIL.DELAY
-ESPR_NW	
-	POP		HL
+
+	POP		HL,AF
 	RET
 
 
@@ -426,6 +412,7 @@ UTC_NOMSG
 UTC_RET
 		POP		HL, DE, BC
 		RET
+
 
 ; Buffer to receive response from ESP
 RS_BUFF	DS RS_BUFF_SIZE, 0

@@ -7,8 +7,14 @@
 ; Set to 1 to turn debug ON with DeZog VSCode plugin
 ; Set to 0 to compile .EXE
 DEBUG               EQU 0
+
+; Set to 1 to output TRACE messages
 TRACE               EQU 1
-EXE_VERSION         EQU 1
+
+; Version of EXE file, 1 for DSS 1.70+
+EXE_VERSION         EQU 0
+
+; Timeout to wait ESP response
 DEFAULT_TIMEOUT		EQU	2000
 
     SLDOPT COMMENT WPMEM, LOGPOINT, ASSERTION
@@ -22,26 +28,7 @@ DEFAULT_TIMEOUT		EQU	2000
         DS 0x80, 0
     ENDIF
 
-	MACRO	SEND_CMD	data
-	LD		HL, data
-	CALL	WIFI.UART_TX_CMD
-	CALL	CHECK_ERROR
-	ENDM	
-
-	; MACRO 	PRINT	data
-	; LD		HL,data
-    ; LD      C,DSS_PCHARS
-    ; RST     DSS
-	; ENDM
-
-	MACRO 	PRINTLN	data
-	LD		HL,data
-    LD      C,DSS_PCHARS
-    RST     DSS
-	LD		HL, LINE_END
-	RST     DSS
-	ENDM
-
+	INCLUDE "macro.inc"
 	INCLUDE "dss.inc"
 	INCLUDE "sprinter.inc"
 
@@ -74,7 +61,8 @@ START
     ; LD 		IX,CMD_LINE1
 	LD		SP, STACK_TOP
     ENDIF
-	
+
+
 	CALL 	ISA.ISA_RESET
 
     PRINTLN MSG_START
@@ -84,14 +72,36 @@ START
 	; Turn local echo Off
 	CALL	INIT_ESP
 
+	; Display main menu to make selection
+MENU_AGAIN
+	CALL	SELECT_MAIN_MENU
+
+	; Do somethink with selected item
+	AND 	A
+	JR		Z, MENU_EXIT
+	DEC		A
+	JP		Z, MENU_SELECT_WIFI
+	DEC		A
+	JP		Z, MENU_CONFIGURE_IP
+	DEC		A
+	JP		Z, MENU_DISPLAY_INFO
+	JP		MENU_AGAIN
+
+MENU_EXIT
 	LD		B,0
 	JP		EXIT
 
+
+MENU_SELECT_WIFI
+MENU_CONFIGURE_IP
+MENU_DISPLAY_INFO
+	JP		MENU_AGAIN
 
 NO_TL_FOUND
 	PRINTLN MSG_SWF_NOF
 	LD		B,2
 	JP		EXIT
+
 
 CHECK_ERROR
 	RET		NC
@@ -123,38 +133,69 @@ FIND_SWF
 ; Init basic parameters of ESP
 ; ------------------------------------------------------
 INIT_ESP
+	PUSH	BC, DE
 	LD		DE, WIFI.RS_BUFF
 	LD		BC, DEFAULT_TIMEOUT
 
- 	IF TRACE
-   	PRINTLN	MSG_ECHO_OFF
- 	ENDIF
+   	TRACELN	MSG_ECHO_OFF
 	SEND_CMD CMD_ECHO_OFF
 
- 	IF TRACE
-   	PRINTLN MSG_STATIOJN_MODE
- 	ENDIF
+   	TRACELN MSG_STATIOJN_MODE
 	SEND_CMD CMD_STATION_MODE
 
- 	IF TRACE
-   	PRINTLN MSG_NO_SLEEP
- 	ENDIF
+   	TRACELN MSG_NO_SLEEP
 	SEND_CMD CMD_NO_SLEEP
 
- 	IF TRACE
-   	PRINTLN MSG_SET_UART
- 	ENDIF
+   	TRACELN MSG_SET_UART
 	SEND_CMD CMD_SET_SPEED
 
-	IF TRACE
-   	PRINTLN MSG_SET_OPT
- 	ENDIF
+   	TRACELN MSG_SET_OPT
 	SEND_CMD CMD_CWLAP_OPT
-	
+	POP		DE,BC
 	RET
 
 ; ------------------------------------------------------
-; Messages
+; Set DHCP mode
+; Out: CF=1 if error
+; ------------------------------------------------------
+SET_DHCP_MODE
+	PUSH	BC,DE
+	LD		DE, WIFI.RS_BUFF
+	LD		BC, DEFAULT_TIMEOUT
+	TRACELN MSG_SET_DHCP
+	SEND_CMD CMD_SET_DHCP
+	POP		DE,BC
+	RET
+
+
+
+; ------------------------------------------------------
+;  Output main menu to select user action
+;  Ret: A = selected menu item
+; ------------------------------------------------------
+SELECT_MAIN_MENU
+	PUSH	BC
+	PRINTLN MSG_MAIN_MENU
+SMM_L1
+	PRINT MSG_ENT_NO
+	; SCANF
+	LD		C, DSS_ECHOKEY
+	RST		DSS
+	SUB		'0'
+	; Test A in range [0..3]
+	AND		A
+	JP		M, SMM_L1
+	CP		4
+	JP 		P, SMM_L1
+	POP		BC
+	RET
+
+; ------------------------------------------------------
+; Messages	DB "\r\n1 - Select WiFi Network\r\n"
+   	DB "2 - Configure IP parameters\r\n"
+   	DB "3 - Display info\r\n"
+	DB "0 - Exit",0
+
 ; ------------------------------------------------------
 MSG_START
 	DB "ESP-Setup for Sprinter-WiFi by Romych's, (c) 2024\r\n", 0
@@ -172,6 +213,14 @@ MSG_COMM_ERROR
 COMM_ERROR_NO
 	DB "n!",0
 
+MSG_MAIN_MENU
+	DB "\r\n1 - Select WiFi Network\r\n"
+   	DB "2 - Configure IP parameters\r\n"
+   	DB "3 - Display info\r\n"
+	DB "0 - Exit",0
+
+MSG_ENT_NO
+	DB "\r\nEnter number 0..3: ",0
 ; ------------------------------------------------------
 ; Debug messages
 ; ------------------------------------------------------
@@ -191,6 +240,9 @@ MSG_SET_UART
 
 MSG_SET_OPT
 	DB "Set options",0
+
+MSG_SET_DHCP
+	DB	"Set DHCP mode",0
 
 	ENDIF
 

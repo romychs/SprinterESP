@@ -2,7 +2,7 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "make (sjasmplus)",
+            "label": "make ESPSET (sjasmplus)",
             "type": "shell",
             "command": "sjasmplus",
             "args": [
@@ -28,7 +28,36 @@
                 "isDefault": true
             }
         },
-        {
+ 
+		{
+            "label": "make WTERM (sjasmplus)",
+            "type": "shell",
+            "command": "sjasmplus",
+            "args": [
+                "--sld=wterm.sld",
+                "--sym=wterm.labels",
+                "--raw=wterm.exe",
+                "--fullpath",
+                "wterm.asm"
+            ],
+            "problemMatcher": {
+                "owner": "sjasmplus",
+                "fileLocation": "autoDetect",
+                "pattern": {
+                    "regexp": "^(.*)\\((\\d+)\\):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "severity": 3,
+                    "message": 4
+                }
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+ 
+		{
             "label": "start mame",
             "type": "shell",
             "command": "while true; do ./mame spectrum -window -debugger gdbstub -debug -debugger_port 12000 -verbose -resolution 512x384 ; sleep 2 ; done",

@@ -7,27 +7,40 @@
 ; Inp:	HL - number of cycles, if HL=0, then 2000
 ; ------------------------------------------------------
 DELAY
-	PUSH	AF
-	PUSH	HL
+	PUSH	AF,BC,HL
+
     LD		A,H
     OR		L
-    JP		NZ,DELAY_L1
-    LD		HL,2000
-DELAY_L1:
+    JR		NZ,DELAY_NXT
+    LD		HL,20
+
+DELAY_NXT
+	CALL	SUB_DELAY
    	DEC		HL
     LD		A,H
     OR		L
-    JP		NZ,DELAY_L1
-	POP		HL
-    POP		AF
+    JP		NZ,DELAY_NXT
+
+	POP		HL,BC,AF
 	RET
+
+SUB_DELAY
+	LD		BC,400
+SBD_NXT
+	DEC		BC
+	LD		A, B
+	OR		C
+	JR		NZ, SBD_NXT
+	RET
+
+
+
 
 ; TODO: Do it with timer
 DELAY_1MS
-	PUSH	HL
-	LD 		HL,100
-	CALL	DELAY
-	POP		HL
+	PUSH	BC
+	CALL	SUB_DELAY
+	POP		BC
 	RET
 
 ; ------------------------------------------------------
@@ -72,6 +85,63 @@ STC_NE
 STC_EQ
 	POP		HL,DE
 	RET
+
+; ------------------------------------------------------
+; Convert string to number
+; Inp: DE - ptr to zero ended string
+; Out: HL - Result
+; ------------------------------------------------------
+ATOU
+	PUSH	BC
+  	LD		HL,0x0000
+ATOU_L1
+  	LD		A,(DE)
+  	AND		A
+  	JR		Z, ATOU_LE
+  	SUB		0x30
+  	CP		10
+  	JR		NC, ATOU_LE
+  	INC 	DE
+  	LD 		B,H
+  	LD 		C,L
+  	ADD 	HL,HL
+  	ADD 	HL,HL
+  	ADD 	HL,BC
+  	ADD 	HL,HL
+  	ADD 	A,L
+  	LD 		L,A
+  	JR 		NC,ATOU_L1
+  	INC 	H
+  	JP 		ATOU_L1
+ATOU_LE
+	POP		BC
+	RET
+
+
+; ------------------------------------------------------
+; Find char in string
+;	Inp: HL - ptr to zero endeds string
+;		 A  - char to find
+;	Outp: CF=0, HL points to char if found
+;		  CF=1 - Not found
+; ------------------------------------------------------
+STRCHR
+	PUSH	BC
+STCH_NEXT	
+	LD		C,A
+	LD		A,(HL)
+	AND		A
+	JR		Z, STCH_N_FOUND
+	CP		C
+	JR		Z, STCH_FOUND
+	INC		HL
+	JR		STCH_NEXT
+STCH_N_FOUND
+	SCF
+STCH_FOUND
+	POP		BC
+	RET
+
 
 
 

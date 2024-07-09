@@ -1,0 +1,28 @@
+	MACRO	SEND_CMD	data
+	LD		HL, data
+	CALL	WIFI.UART_TX_CMD
+	CALL	CHECK_ERROR
+	ENDM	
+
+	MACRO 	PRINT	data
+	LD		HL,data
+    LD      C,DSS_PCHARS
+    RST     DSS
+	ENDM
+
+	MACRO 	PRINTLN	data
+	LD		HL,data
+    LD      C,DSS_PCHARS
+    RST     DSS
+    LD      C,DSS_PCHARS
+	LD		HL, WCOMMON.LINE_END
+	RST     DSS
+	ENDM
+
+	MACRO 	TRACELN	data
+		IF  TRACE == 1
+			PUSH BC,DE
+			PRINTLN data
+			POP DE,BC
+		ENDIF
+	ENDM

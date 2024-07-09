@@ -56,6 +56,24 @@ DSS_HANDLER
 	JP      Z, _CH_DIR
 	CP		0x1E
 	JP      Z, _CURDIR
+
+	CP		DSS_WAITKEY
+	JP      Z, _WAITKEY
+
+
+	CP		DSS_ECHOKEY
+	JP      Z, _ECHOKEY
+
+	CP		DSS_SETVMOD
+	JP		Z, _SETVMOD
+
+
+	CP		DSS_GETVMOD
+	JP		Z, _GETVMOD
+
+	CP		low DSS_CLEAR
+	JP		Z, _CLEAR
+
     CP      0x5C    
     JP      Z, _PCHARS
     CP      0x41
@@ -218,6 +236,17 @@ _CURDIR
 	POP 	DE
 	JP		NORM_EXIT
 
+_ECHOKEY
+	PUSH	HL
+	LD		HL,EC
+    LD      C,DSS_PCHARS
+    RST     DSS
+	POP		HL
+	LD		A,(EC)
+	JP		NORM_EXIT
+
+EC 	DB "3",0
+
 ; Входные значения:
 ; HL - указатель на файловую спецификацию
 ; DE - рабочий буфер 44 байта, если B=0, иначе 256 байт
@@ -237,6 +266,63 @@ _FIND_FIRST
 	LDIR
 	POP DE
     JP      NORM_EXIT
+
+; Выходные значения:
+; A - код символа
+; D - позиционный код
+; Е - ASCII код
+; C - режим клавиатуры:
+_WAITKEY
+	XOR		A
+	LD		D, A
+	LD		C, A
+	LD		E,65
+	LD		A,65
+    JP      NORM_EXIT
+
+
+CUR_VMOD
+	DB 1
+
+; 50h (80) SETVMOD (Выбор режима экрана)
+; Входные значения:
+; A - режим экрана:
+; 02h - текстовый 40x32x16 цветов;
+; 03h - текстовый 80x32x16 цветов;
+; 81h - графический 320x256x256 цветов;
+; 82h - графический 640x256x16 цветов;
+; B - страница экрана 0/1
+; C - 50h
+; Выходные значения:
+; A - код ошибки, если CF=1
+_SETVMOD
+	LD		(CUR_VMOD),A
+	JP      NORM_EXIT
+
+; 51h (81) GETVMOD (Получить текущий режим экрана)
+; Входные значения:
+; C - 51h
+; Выходные значения:
+; A - код ошибки, если CF=1
+; A - текущий режим экрана, если CF=0
+; B - страница экрана 0/1
+_GETVMOD
+	LD		A,(CUR_VMOD)
+	JP      NORM_EXIT
+
+; 56h (86) CLEAR (Очистка окна)
+; Входные значения:
+; D - строка левого верхнего угла окна
+; E - столбец левого верхнего угла окна
+; H - высота окна
+; L - ширина окна
+; B - атрибут заполнитель
+; A - символ заполнитель
+; C - 56h
+; Выходные значения:
+; нет
+_CLEAR
+	JP      NORM_EXIT
 
 
 _EXIT
