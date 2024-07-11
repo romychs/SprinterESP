@@ -1,7 +1,8 @@
 ; ======================================================
 ; Library for Sprinter-WiFi ESP ISA Card
-; 
-; By Romych's, 2024 (c)
+; By Roman Boykov. Copyright (c) 2024
+; https://github.com/romychs
+; License: BSD 3-Clause
 ; ======================================================
 
 ;ISA_BASE_A		EQU 0xC000        						; Базовый адрес портов ISA в памяти

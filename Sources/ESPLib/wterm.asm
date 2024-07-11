@@ -1,7 +1,9 @@
 ; ======================================================
-; WTERM for SprinterWiFi for Sprinter computer
-; By Romych, 2024
+; WTERM terminal for Sprinter-WiFi ISA Card
+; For Sprinter computer DSS
+; By Roman Boykov. Copyright (c) 2024
 ; https://github.com/romychs
+; License: BSD 3-Clause
 ; ======================================================
 
 ; Set to 1 to turn debug ON with DeZog VSCode plugin
@@ -32,7 +34,7 @@ DEFAULT_TIMEOUT		EQU	2000
 	INCLUDE "dss.inc"
 	INCLUDE "sprinter.inc"
 
-	MODULE MAIN
+	MODULE	MAIN
 
     ORG	0x8080
 ; ------------------------------------------------------
@@ -57,8 +59,8 @@ EXE_HEADER
 START
 	
     IF DEBUG == 1
-    ; LD 		IX,CMD_LINE1
-	LD		SP, STACK_TOP
+    	; LD 		IX,CMD_LINE1
+		LD		SP, STACK_TOP
     ENDIF
 
 	CALL 	ISA.ISA_RESET
@@ -77,29 +79,10 @@ START
 
 	CALL	WIFI.UART_EMPTY_RS
 
-	; IF TRACE
-	; 	; Dump, DLB=0 registers
-	; 	LD		BC, 0x0800
-	; 	CALL	DUMP_REGS
-
-	; 	; Dump, DLAB=1 registers
-	; 	LD		HL, REG_LCR
-	; 	LD		E, LCR_DLAB | LCR_WL8
-	; 	CALL	WIFI.UART_WRITE
-		
-	; 	LD		BC, 0x0210
-	; 	CALL	DUMP_REGS
-
-	; 	LD		HL, REG_LCR
-	; 	LD		E, LCR_WL8
-	; 	CALL	WIFI.UART_WRITE
-	; ENDIF
-
-	; Turn local echo Off
 	CALL	WCOMMON.INIT_ESP
 
 ; ------------------------------------------------------
-;	Do Some
+; Do Some
 ; ------------------------------------------------------
 
 OK_EXIT
@@ -107,64 +90,11 @@ OK_EXIT
 	JP		WCOMMON.EXIT
 
 
-DUMP_REGS
-	LD		HL, PORT_UART_A
-	
-
-DR_NEXT	
-	LD		DE,MSG_DR_RN
-	CALL	HEXB
-	INC		C	
-
-	CALL    WIFI.UART_READ
-	PUSH    BC
-	LD		C,A
-	LD		DE,MSG_DR_RV
-	CALL	HEXB
-	PUSH 	HL	
-	
-	PRINTLN MSG_DR
-
-	POP		HL,BC
-	INC		HL
-	DJNZ	DR_NEXT
-	RET	
-
-MSG_DR
-	DB	"Reg[0x"
-MSG_DR_RN	
-	DB	"vv]=0x"
-MSG_DR_RV	
-	DB	"vv",0
-
-; ------------------------------------------------------
-; Byte to hex, 
-;	Inp: C
-;	Out: (DE)
-; ------------------------------------------------------
-HEXB
-   LD		A,C
-   RRA
-   RRA
-   RRA
-   RRA
-   CALL		CONV_NIBLE
-   LD		A,C
-CONV_NIBLE
-   AND		0x0f
-   ADD		A,0x90
-   DAA
-   ADC		A,0x40
-   DAA
-   LD		(DE), A
-   INC		DE
-   RET
-
 ; ------------------------------------------------------
 ; Custom messages
 ; ------------------------------------------------------
 MSG_START
-	DB "WTerm terminal for Sprinter-WiFi by Romych's, (c) 2024\r\n", 0
+	DB "Terminal for Sprinter-WiFi by Sprinter Team. v1.0.1, ", __DATE__, "\r\n", 0
 
 ; ------------------------------------------------------
 ; Custom commands

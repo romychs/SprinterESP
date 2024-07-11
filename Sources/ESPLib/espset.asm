@@ -1,8 +1,10 @@
 ; ======================================================
-; ESPSET for SprinterWiFi for Sprinter computer
-; By Romych, 2024
+; ESPSET for Sprinter-WiFi for Sprinter computer
+; By Roman Boykov. Copyright (c) 2024
 ; https://github.com/romychs
+; License: BSD 3-Clause
 ; ======================================================
+
 
 ; Set to 1 to turn debug ON with DeZog VSCode plugin
 ; Set to 0 to compile .EXE
@@ -198,7 +200,7 @@ SMM_L1
 
 ; ------------------------------------------------------
 MSG_START
-	DB "ESP-Setup for Sprinter-WiFi by Romych's, (c) 2024\r\n", 0
+	DB "Setup for Sprinter-WiFi by Sprinter Team, ", __DATE__ ,"\r\n", 0
 
 MSG_SWF_NOF
 	DB "Sprinter-WiFi not found!",0

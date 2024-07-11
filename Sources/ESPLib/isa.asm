@@ -1,6 +1,8 @@
 ; ======================================================
-; ISA Library for Sprinter
-; By Romych's, 2024 (c)
+; ISA Library for Sprinter computer
+; By Roman Boykov. Copyright (c) 2024
+; https://github.com/romychs
+; License: BSD 3-Clause
 ; ======================================================
 
 PORT_ISA		EQU 0x9FBD
@@ -17,8 +19,6 @@ ISA_A18  		EQU	0x10
 ISA_A19  		EQU	0x20
 ISA_AEN  		EQU	0x40
 ISA_RST			EQU	0x80
-
-
 
 	MODULE	ISA
 
@@ -74,33 +74,7 @@ ISA_CLOSE
 	POP		BC,AF
 	RET
 
-
-; DELAY_20
-; 	;IN		A,(PAGE1)
-; 	LD		A, CTC_CR_VEC | CTC_CR_SWR					; stop timer
-; 	OUT		(CTC_CH1), A
-; 	; Init Ch2 CTC - clk source for Ch3
-; 	LD		A,CTC_CT_PRE | CTC_CR_TCF | CTC_CR_SWR | CTC_CR_VEC
-; 	OUT		(CTC_CH2), A
-; 	LD		A, 4
-; 	; TO2->TRG3 = 875kHz / 256 / 4 = 854,5 Hz
-; 	OUT		(CTC_CH2), A
-	
-; 	LD		A, CTC_CT_EI | CTC_CT_CTR | CTC_CR_TCF | CTC_CR_SWR | CTC_CR_VEC
-; 	OUT		(CTC_CH3), A
-; 	LD		A, 17
-; 	OUT		(CTC_CH3), A
-
-
-; it vector defined in bit 7­3,bit 2­1 don't care, bit 0 = 0
-; and loaded into channel 0	
-
-; To save memory page 0
-SAVE_MMU0		DB	0
 ; To save memory page 3
 SAVE_MMU3		DB	0									
-
-;	ALIGN 256,0
-
 
 	ENDMODULE

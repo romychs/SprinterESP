@@ -1,4 +1,9 @@
-
+; ======================================================
+; Utility code for Sprinter-WiFi utilities
+; By Roman Boykov. Copyright (c) 2024
+; https://github.com/romychs
+; License: BSD 3-Clause
+; ======================================================
 
 	MODULE UTIL
 	
@@ -151,6 +156,28 @@ STCH_FOUND
 	POP		BC
 	RET
 
+; ------------------------------------------------------
+; Convert Byte to hex
+;	Inp: C
+;	Out: (DE)
+; ------------------------------------------------------
+HEXB
+   LD		A,C
+   RRA
+   RRA
+   RRA
+   RRA
+   CALL		CONV_NIBLE
+   LD		A,C
+CONV_NIBLE
+   AND		0x0f
+   ADD		A,0x90
+   DAA
+   ADC		A,0x40
+   DAA
+   LD		(DE), A
+   INC		DE
+   RET
 
 
 

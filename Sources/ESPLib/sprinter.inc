@@ -1,6 +1,6 @@
 ; ======================================================
 ; Defines for Sprinter computer hardware
-; By Romych, 2024
+; By Roman Boykov. Copyright (c) 2024
 ; https://github.com/romychs
 ; ======================================================
 

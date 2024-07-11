@@ -1,3 +1,10 @@
+; ======================================================
+; Common code for Sprinter-WiFi utilities
+; By Roman Boykov. Copyright (c) 2024
+; https://github.com/romychs
+; License: BSD 3-Clause
+; ======================================================
+
 	MODULE WCOMMON
 
 ; ------------------------------------------------------
@@ -9,6 +16,7 @@ CHECK_ERROR
 	ADD		A,'0'
 	LD		(COMM_ERROR_NO), A
 	PRINTLN	MSG_COMM_ERROR
+	CALL	DUMP_UART_REGS
 	LD		B,3
 	POP		HL											; ret addr reset
 
@@ -35,6 +43,52 @@ NO_TL_FOUND
 	PRINTLN MSG_SWF_NOF
 	LD		B,2
 	JP		EXIT
+
+
+	IF TRACE
+; ------------------------------------------------------
+; Dump all UTL16C550 registers to screen for debug
+; ------------------------------------------------------
+DUMP_UART_REGS
+		; Dump, DLAB=0 registers
+		LD		BC, 0x0800
+		CALL	DUMP_REGS
+
+		; Dump, DLAB=1 registers
+		LD		HL, REG_LCR
+		LD		E, LCR_DLAB | LCR_WL8
+		CALL	WIFI.UART_WRITE
+		
+		LD		BC, 0x0210
+		CALL	DUMP_REGS
+
+		LD		HL, REG_LCR
+		LD		E, LCR_WL8
+		CALL	WIFI.UART_WRITE
+		RET
+
+DUMP_REGS
+		LD		HL, PORT_UART_A
+	
+DR_NEXT	
+		LD		DE,MSG_DR_RN
+		CALL	UTIL.HEXB
+		INC		C	
+
+		CALL    WIFI.UART_READ
+		PUSH    BC
+		LD		C,A
+		LD		DE,MSG_DR_RV
+		CALL	UTIL.HEXB
+		PUSH 	HL	
+		
+		PRINTLN MSG_DR
+
+		POP		HL,BC
+		INC		HL
+		DJNZ	DR_NEXT
+		RET	
+	ENDIF
 
 
 ; ------------------------------------------------------
@@ -157,6 +211,13 @@ SAVE_VMODE
 ; Debug messages
 ; ------------------------------------------------------
 	IF TRACE
+
+MSG_DR
+	DB	"Reg[0x"
+MSG_DR_RN	
+	DB	"vv]=0x"
+MSG_DR_RV	
+	DB	"vv",0
 
 MSG_ECHO_OFF 
 	DB "Echo off",0

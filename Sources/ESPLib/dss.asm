@@ -1,3 +1,9 @@
+; ======================================================
+; DSS Estex dumb for debug code in VSC with DEZOG plugin 
+; By Roman Boykov. Copyright (c) 2024
+; https://github.com/romychs
+; ======================================================
+
     ORG 0x0000
 
 RESET:
