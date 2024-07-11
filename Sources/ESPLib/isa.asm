@@ -26,17 +26,14 @@ ISA_RST			EQU	0x80
 ; Reset ISA device
 ; ------------------------------------------------------
 ISA_RESET
-	PUSH	AF,BC,HL
-
 	LD		BC, PORT_ISA
 	LD		A,ISA_RST | ISA_AEN							; RESET=1 AEN=1	
 	OUT 	(C), A
 	CALL 	UTIL.DELAY_1MS
 	XOR 	A
 	OUT 	(C), A										; RESET=0 AEN=0
-	LD		HL,20
+	LD		HL,100
 	CALL 	UTIL.DELAY
-	POP		HL,BC,AF
 	RET
 
 ; ------------------------------------------------------

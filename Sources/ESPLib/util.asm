@@ -15,7 +15,7 @@ DELAY
     LD		HL,20
 
 DELAY_NXT
-	CALL	SUB_DELAY
+	CALL	DELAY_1MS_INT
    	DEC		HL
     LD		A,H
     OR		L
@@ -24,7 +24,9 @@ DELAY_NXT
 	POP		HL,BC,AF
 	RET
 
-SUB_DELAY
+
+
+DELAY_1MS_INT
 	LD		BC,400
 SBD_NXT
 	DEC		BC
@@ -36,12 +38,19 @@ SBD_NXT
 
 
 
-; TODO: Do it with timer
 DELAY_1MS
 	PUSH	BC
-	CALL	SUB_DELAY
+	CALL	DELAY_1MS_INT
 	POP		BC
 	RET
+
+DELAY_100uS
+	PUSH	BC
+	LD		BC,40
+	CALL	SBD_NXT
+	POP		BC
+	RET
+
 
 ; ------------------------------------------------------
 ; Calc length of zero ended string

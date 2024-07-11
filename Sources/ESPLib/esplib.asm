@@ -48,7 +48,7 @@ LSR_OE          EQU	0x02								; Overrun Error
 LSR_PE          EQU	0x04								; Parity Error
 LSR_FE          EQU	0x08								; Framing Error
 LSR_BI			EQU	0x10								; Break Interrupt
-LSR_THRE        EQU	0x20								; Transmitter Holding Register
+LSR_THRE        EQU	0x20								; Transmitter Holding Register Empty
 LSR_TEMT        EQU	0x40								; Transmitter empty
 LSR_RCVE        EQU	0x80								; Error in receiver FIFO
 
@@ -115,11 +115,28 @@ UF_T_FND
 
 ; Test slot, A - ISA Slot no. 0 or 1
 UT_T_SLOT
+	; check IER hi bits, will be 0
 	LD		(ISA.ISA_SLOT), A
 	LD		HL, REG_IER
 	CALL	UART_READ
 	AND		0xF0
+	RET		NZ
+
+	; check SCR register
+	LD		DE,0x5555
+	CALL	CHK_SCR
+	RET		NZ
+	LD		DE,0xAAAA
+	CALL	CHK_SCR
 	RET
+
+CHK_SCR	
+	LD		HL, REG_SCR
+	CALL	UART_WRITE
+	CALL	UART_READ
+	CP		D
+	RET
+
 
 
 ; ------------------------------------------------------
@@ -133,13 +150,13 @@ UART_INIT
 	LD		A, FCR_TR8 | FCR_FIFO						; Enable FIFO buffer, trigger to 14 byte
 	LD		(IX+_FCR),A									
 	XOR 	A
-	LD 		(IX+_IER), A										; Disable interrupts
+	LD 		(IX+_IER), A								; Disable interrupts
 
 	; Set 8bit word and Divisor for speed
 	LD 		A, LCR_DLAB | LCR_WL8
-	LD 		(IX+_LCR), A										; Enable Baud rate latch
+	LD 		(IX+_LCR), A								; Enable Baud rate latch
 	LD 		A, DIVISOR
-	LD 		(IX+_DLL), A										; 8 - 115200
+	LD 		(IX+_DLL), A								; 8 - 115200
 	XOR 	A
 	LD		(IX+_DLM), A
 	LD 		A, LCR_WL8									; 8bit word, disable latch
@@ -175,24 +192,29 @@ UART_WRITE
 ;   Out: CF=1 - tr not ready,  CF=0 ready
 ; ------------------------------------------------------
 UART_WAIT_TR
-	PUSH	AF, BC, HL
-
 	CALL	ISA.ISA_OPEN
-	LD BC,	100
+	CALL	UART_WAIT_TR_INT
+	CALL	ISA.ISA_CLOSE
+	RET
+
+;
+; Wait, without open/close ISA
+;
+UART_WAIT_TR_INT
+	PUSH	AF, BC, HL
+	LD BC,	500
 	LD HL, 	REG_LSR
 WAIT_TR_BZY           
 	LD 		A,(HL)
 	AND 	A, LSR_THRE
 	JR 		NZ,WAIT_TR_RDY
-	CALL	UTIL.DELAY_1MS
+	CALL	UTIL.DELAY_100uS							; ~11 bit tx delay
 	DEC 	BC
 	LD 		A, C
 	OR		B	
 	JR 		NZ,WAIT_TR_BZY
 	SCF
 WAIT_TR_RDY
-	CALL ISA.ISA_CLOSE
-
 	POP 	HL, BC, AF
 	RET
 
@@ -211,7 +233,7 @@ UTB_NOT_R
 	RET
 
 ; ------------------------------------------------------
-; char uart_tx_buffer(char* tbuff, int size)
+;  Transmit buffer 
 ;	Inp: HL -> buffer, BC - size
 ;   Out: CF=0 - Ok, CF=1 - Timeout
 ; ------------------------------------------------------
@@ -225,8 +247,8 @@ UTX_NEXT
 	OR		C
 	JR		Z,UTX_EMP
 	; check transmitter ready
-	CALL	UART_WAIT_TR
-	JR		C, UTX_EMP
+	CALL	UART_WAIT_TR_INT
+	JR		C, UTX_TXNR
 	; transmitt byte
 	LD		A,(HL)
 	INC		HL
@@ -234,22 +256,54 @@ UTX_NEXT
 	DEC		BC
 	JR		UTX_NEXT
 	; CF=0
-	XOR		A
-UTX_EMP
+UTX_EMP	
+	AND		A
+UTX_TXNR
 	CALL	ISA.ISA_CLOSE
 	POP		HL,DE,BC
 	RET
+
+; ------------------------------------------------------
+;  Transmit zero ended string
+;	Inp: HL -> buffer
+;   Out: CF=0 - Ok, CF=1 - Timeout
+; ------------------------------------------------------
+UART_TX_STRING
+	PUSH	DE,HL
+	LD		DE, REG_THR
+	CALL	ISA.ISA_OPEN
+UTXS_NEXT
+	LD 		A,(HL)
+	AND		A
+	JR		Z,UTXS_END
+	; check transmitter ready
+	CALL	UART_WAIT_TR_INT
+	JR		C, UTXS_TXNR
+	; transmitt byte
+	LD		A,(HL)
+	INC		HL
+	LD		(DE),A
+	JR		UTXS_NEXT
+	; CF=0
+UTXS_END
+	AND		A
+UTXS_TXNR
+	CALL	ISA.ISA_CLOSE
+	POP		HL,DE
+	RET
+
+
+
+
 ; ------------------------------------------------------
 ; Empty receiver FIFO buffer
 ; ------------------------------------------------------
 UART_EMPTY_RS
-	PUSH 	AF, HL
-	CALL 	ISA.ISA_OPEN
-	LD 		A, FCR_TR8 | FCR_RESET_RX | FCR_FIFO
+	PUSH 	DE, HL
+	LD 		E, FCR_TR8 | FCR_RESET_RX | FCR_FIFO
 	LD		HL, REG_FCR
-	LD 		(HL), A
-	CALL	ISA.ISA_CLOSE
-	POP 	HL, AF
+	CALL	UART_WRITE
+	POP 	HL, DE
 	RET
 
 ; ------------------------------------------------------
@@ -259,7 +313,7 @@ UART_EMPTY_RS
 ; ------------------------------------------------------
 UART_WAIT_RS1
 	PUSH	BC,HL
-WAIT_MS+*	LD	BC,0x0000
+WAIT_MS+*	LD	BC,0x2000
 	JR		UVR_NEXT
 UART_WAIT_RS
 	PUSH	BC,HL
@@ -274,6 +328,11 @@ UVR_NEXT
 	OR		C
 	JR		NZ,UVR_NEXT
 UVR_TO
+    IF TRACE
+	PUSH	AF,BC,DE,HL
+	PRINTLN MSG_RCV_EMPTY
+	POP		HL,DE,BC,AF
+	ENDIF
 	SCF
 UVR_OK
 	POP		HL,BC
@@ -288,15 +347,14 @@ ESP_RESET
 	CALL	ISA.ISA_OPEN
 
 	LD		HL, REG_MCR
-	LD		A, MCR_RST | MCR_RTS						; 0110b ESP  -PGM=1, -RST=0, -RTS=0
-	LD		(HL), A
+	LD		A, MCR_RST ;| MCR_RTS						; -OUT1=0 -> RESET ESP
+	LD		(REG_MCR), A
 	CALL	UTIL.DELAY_1MS
-	;LD		HL, REG_MCR
-	LD		A, MCR_AFE | MCR_RTS						; 0x22 -RST = 1 -RTS=0 AutoFlow enabled	
+	LD		A, MCR_AFE | MCR_RTS						; 0x22 -OUT1=1 RTS=1 AutoFlow enabled
 	LD		(HL), A
-
 	CALL	ISA.ISA_CLOSE
 	
+	; wait 2s for ESP firmware boot
 	LD		HL,2000
 	CALL	UTIL.DELAY
 
@@ -337,8 +395,8 @@ UART_TX_CMD
 		CALL	UART_EMPTY_RS
 
 		; HL - Buffer, BC - Size
-		CALL	UTIL.STRLEN
-		CALL	UART_TX_BUFFER
+		;CALL	UTIL.STRLEN
+		CALL	UART_TX_STRING
 		JR		NC, UTC_STRT_RX
 		; error, transmit timeout
 		LD		A, RES_TX_TIMEOUT
@@ -413,6 +471,10 @@ UTC_RET
 		POP		HL, DE, BC
 		RET
 
+	IF TRACE
+MSG_RCV_EMPTY
+	DB "Receiver is empty!",0	
+	ENDIF
 
 ; Buffer to receive response from ESP
 RS_BUFF	DS RS_BUFF_SIZE, 0

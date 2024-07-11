@@ -6,7 +6,7 @@
 
 ; Set to 1 to turn debug ON with DeZog VSCode plugin
 ; Set to 0 to compile .EXE
-DEBUG               EQU 1
+DEBUG               EQU 0
 
 ; Set to 1 to output TRACE messages
 TRACE               EQU 1
@@ -75,30 +75,25 @@ START
 	PRINTLN WCOMMON.MSG_ESP_RESET
 	CALL	WIFI.ESP_RESET
 
+	CALL	WIFI.UART_EMPTY_RS
 
-	LD		HL,REG_SCR
-	LD		E,0x55
-	CALL	WIFI.UART_WRITE
-	
-	LD 		E, FCR_TR8 | FCR_FIFO
-	LD		HL, REG_FCR
-	CALL	WIFI.UART_WRITE	
+	; IF TRACE
+	; 	; Dump, DLB=0 registers
+	; 	LD		BC, 0x0800
+	; 	CALL	DUMP_REGS
 
-	; Debug, dump all registers
-	LD		BC, 0x0800
-	CALL	DUMP_REGS
+	; 	; Dump, DLAB=1 registers
+	; 	LD		HL, REG_LCR
+	; 	LD		E, LCR_DLAB | LCR_WL8
+	; 	CALL	WIFI.UART_WRITE
+		
+	; 	LD		BC, 0x0210
+	; 	CALL	DUMP_REGS
 
-	; Dump, page2
-	LD		HL, REG_LCR
-	LD		E, LCR_DLAB | LCR_WL8
-	CALL	WIFI.UART_WRITE
-	
-	LD		BC, 0x0310
-	CALL	DUMP_REGS
-
-	LD		HL, REG_LCR
-	LD		E, LCR_WL8
-	CALL	WIFI.UART_WRITE
+	; 	LD		HL, REG_LCR
+	; 	LD		E, LCR_WL8
+	; 	CALL	WIFI.UART_WRITE
+	; ENDIF
 
 	; Turn local echo Off
 	CALL	WCOMMON.INIT_ESP
